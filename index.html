@@ -1227,8 +1227,9 @@ fetch('/predict', {
   mostrarEstado('espera');
   mostrarError('Error de comunicación con el servidor Render.');
 });
-
-
+      };                              /* <-- AÑADIDO: cierra lector.onload */
+      lector.readAsDataURL(archivo);  /* <-- AÑADIDO: faltaba esta llamada */
+    }                                 /* <-- AÑADIDO: cierra procesarMuestra */
 
     /* --- Reinicio de la interfaz --- */
     function reiniciar() {
