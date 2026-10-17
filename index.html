@@ -1,0 +1,1336 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diagnóstico Ambiental IA · Región Huánuco</title>
+<style>
+  :root{
+    --text:#eef2f7;
+    --muted:#94a3b8;
+    --muted-2:#64748b;
+    --stroke:rgba(148,163,184,.16);
+    --stroke-2:rgba(148,163,184,.30);
+    --accent:#34d399;
+    --accent-soft:rgba(52,211,153,.18);
+    --radius:20px;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+
+  body{
+    font-family:'Segoe UI',system-ui,-apple-system,'Helvetica Neue',Tahoma,Geneva,Verdana,sans-serif;
+    color:var(--text);
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    overflow-x:hidden;
+    background-color:#070d1b;
+    background-image:
+      radial-gradient(900px 600px at 10% -12%, rgba(16,185,129,.16), transparent 60%),
+      radial-gradient(820px 520px at 94% 4%, rgba(56,189,248,.14), transparent 62%),
+      linear-gradient(180deg,#070d1b 0%,#0b1424 58%,#060b16 100%);
+    background-attachment:fixed;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* Rejilla técnica muy tenue sobre el fondo */
+  body::before{
+    content:"";
+    position:fixed;
+    inset:0;
+    background-image:
+      linear-gradient(rgba(148,163,184,.055) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(148,163,184,.055) 1px, transparent 1px);
+    background-size:46px 46px;
+    mask-image:radial-gradient(circle at 50% 22%, #000 0%, transparent 78%);
+    -webkit-mask-image:radial-gradient(circle at 50% 22%, #000 0%, transparent 78%);
+    pointer-events:none;
+    z-index:0;
+  }
+
+  header,
+  main,
+  footer{position:relative;z-index:1}
+
+  /* ---------- Encabezado ---------- */
+  header{
+    position:sticky;
+    top:0;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:18px;
+    padding:15px 28px;
+    background:rgba(7,13,27,.74);
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+    border-bottom:1px solid var(--stroke);
+  }
+
+  .logo-section{
+    display:flex;
+    align-items:center;
+    gap:13px;
+    min-width:0;
+  }
+
+  .logo-box{
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    padding:8px 14px;
+    border-radius:12px;
+    font-size:12.5px;
+    font-weight:800;
+    letter-spacing:.7px;
+    color:#6ee7b7;
+    background:linear-gradient(135deg, rgba(16,185,129,.20), rgba(16,185,129,.05));
+    border:1px solid rgba(52,211,153,.30);
+    box-shadow:0 10px 28px -18px rgba(52,211,153,.95);
+    white-space:nowrap;
+  }
+
+  .header-titles{min-width:0}
+  .header-titles h1{
+    font-size:17.5px;
+    font-weight:800;
+    letter-spacing:.2px;
+    color:#fff;
+    line-height:1.25;
+  }
+  .header-titles p{
+    font-size:11.5px;
+    color:var(--muted);
+    margin-top:2px;
+  }
+
+  .badge{
+    display:inline-flex;
+    align-items:center;
+    gap:9px;
+    padding:7px 15px;
+    border-radius:99px;
+    font-size:11.5px;
+    font-weight:600;
+    color:#a7f3d0;
+    background:rgba(15,23,42,.72);
+    border:1px solid #334155;
+    white-space:nowrap;
+  }
+
+  .badge-dot{
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    background-color:#34d399;
+    display:inline-block;
+    animation:pulse 2s infinite;
+  }
+
+  @keyframes pulse{
+    0%{transform:scale(.92);box-shadow:0 0 0 0 rgba(52,211,153,.7)}
+    70%{transform:scale(1);box-shadow:0 0 0 7px rgba(52,211,153,0)}
+    100%{transform:scale(.92);box-shadow:0 0 0 0 rgba(52,211,153,0)}
+  }
+
+  /* ---------- Cuerpo ---------- */
+  main{
+    width:100%;
+    max-width:1080px;
+    margin:0 auto;
+    padding:38px 22px 46px;
+    flex:1;
+    display:flex;
+    align-items:center;
+  }
+
+  .grid{
+    display:grid;
+    grid-template-columns:minmax(0,1.02fr) minmax(0,1fr);
+    gap:26px;
+    width:100%;
+    align-items:stretch;
+  }
+
+  .panel{
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+    padding:20px;
+    border-radius:var(--radius);
+    border:1px solid var(--stroke);
+    background:linear-gradient(165deg, rgba(15,23,42,.66), rgba(2,6,23,.46));
+    backdrop-filter:blur(10px);
+    -webkit-backdrop-filter:blur(10px);
+    box-shadow:0 30px 70px -50px rgba(0,0,0,.9);
+  }
+
+  .section-title{
+    font-size:10.5px;
+    font-weight:700;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:1.2px;
+  }
+
+  /* ---------- Zona de carga ---------- */
+  .drop-zone{
+    position:relative;
+    flex:1;
+    min-height:344px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    padding:32px 22px;
+    border:2px dashed var(--stroke-2);
+    border-radius:16px;
+    background:linear-gradient(180deg, rgba(2,6,23,.46), rgba(2,6,23,.20));
+    cursor:pointer;
+    overflow:hidden;
+    transition:border-color .25s ease, background .25s ease, box-shadow .25s ease, transform .25s ease;
+  }
+  .drop-zone:hover{
+    border-color:rgba(52,211,153,.62);
+    background:linear-gradient(180deg, rgba(16,185,129,.08), rgba(2,6,23,.26));
+    box-shadow:0 26px 60px -44px rgba(52,211,153,.95);
+  }
+  .drop-zone:focus-visible{
+    outline:2px solid var(--accent);
+    outline-offset:3px;
+  }
+  .drop-zone.is-drag{
+    border-style:solid;
+    border-color:var(--accent);
+    background:linear-gradient(180deg, rgba(16,185,129,.17), rgba(2,6,23,.30));
+    box-shadow:0 0 0 4px rgba(52,211,153,.13), 0 34px 70px -44px rgba(52,211,153,1);
+    transform:translateY(-2px);
+  }
+
+  .upload-icon{
+    width:58px;
+    height:58px;
+    margin:0 auto 18px;
+    display:grid;
+    place-items:center;
+    font-size:23px;
+    border-radius:50%;
+    color:var(--muted);
+    background:#1e293b;
+    border:1px solid var(--stroke);
+    transition:color .25s ease, background .25s ease, transform .25s ease, border-color .25s ease;
+  }
+  .drop-zone:hover .upload-icon,
+  .drop-zone.is-drag .upload-icon{
+    color:#10b981;
+    background:rgba(16,185,129,.12);
+    border-color:rgba(52,211,153,.4);
+    transform:translateY(-4px);
+  }
+
+  .drop-title{
+    font-size:15px;
+    font-weight:700;
+    color:#f8fafc;
+    margin-bottom:5px;
+  }
+  .drop-sub{
+    font-size:11.5px;
+    color:var(--muted-2);
+    margin-bottom:20px;
+  }
+  .drop-cta{
+    display:inline-block;
+    padding:9px 18px;
+    font-size:11.5px;
+    font-weight:700;
+    color:#e2e8f0;
+    background:#1e293b;
+    border:1px solid #334155;
+    border-radius:9px;
+    transition:border-color .2s ease, color .2s ease, background .2s ease;
+  }
+  .drop-zone:hover .drop-cta,
+  .drop-zone.is-drag .drop-cta{
+    color:#6ee7b7;
+    border-color:rgba(52,211,153,.45);
+    background:rgba(16,185,129,.12);
+  }
+
+  .drag-hint{
+    font-size:11px;
+    color:#6ee7b7;
+    font-weight:700;
+    letter-spacing:.4px;
+    height:14px;
+    opacity:0;
+    transition:opacity .2s ease;
+  }
+  .drop-zone.is-drag ~ .drag-hint{opacity:1}
+
+  .preview-img{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    border-radius:14px;
+    opacity:0;
+    pointer-events:none;
+    filter:saturate(1.05) contrast(1.02);
+    transition:opacity .45s ease;
+  }
+  .preview-img.is-visible{opacity:1}
+
+  .hint{
+    font-size:10.5px;
+    line-height:1.65;
+    color:var(--muted-2);
+  }
+  .hint b{color:#a7f3d0;font-weight:700}
+
+  /* ---------- Tarjeta de resultados ---------- */
+  .result-card{
+    --accent:#34d399;
+    --accent-soft:rgba(52,211,153,.18);
+    position:relative;
+    flex:1;
+    min-height:300px;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    padding:26px;
+    border-radius:16px;
+    border:1px solid var(--stroke);
+    background:linear-gradient(160deg, rgba(15,23,42,.86), rgba(2,6,23,.72));
+    overflow:hidden;
+    transition:border-color .35s ease, box-shadow .35s ease;
+  }
+  .result-card::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    pointer-events:none;
+    background:radial-gradient(420px 230px at 88% -14%, var(--accent-soft), transparent 72%);
+    transition:background .5s ease;
+  }
+  .result-card.has-result{
+    border-color:var(--accent);
+    box-shadow:0 34px 80px -56px var(--accent);
+  }
+
+  .state-center{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:13px;
+    text-align:center;
+  }
+  .state-text{
+    font-size:13px;
+    color:var(--muted-2);
+    line-height:1.6;
+  }
+  .state-emoji{font-size:30px;filter:grayscale(.35);opacity:.85}
+
+  .spinner{
+    width:42px;
+    height:42px;
+    border:4px solid rgba(16,185,129,.12);
+    border-top-color:#10b981;
+    border-radius:50%;
+    animation:rotate .95s linear infinite;
+  }
+  @keyframes rotate{to{transform:rotate(360deg)}}
+
+  .success-box{
+    position:relative;
+    z-index:1;
+    width:100%;
+    text-align:left;
+    animation:fadeUp .5s cubic-bezier(.2,.7,.3,1) both;
+  }
+  @keyframes fadeUp{
+    from{opacity:0;transform:translateY(10px)}
+    to{opacity:1;transform:translateY(0)}
+  }
+
+  .chip{
+    display:inline-block;
+    padding:5px 11px;
+    margin-bottom:20px;
+    font-size:9.5px;
+    font-weight:800;
+    letter-spacing:.9px;
+    text-transform:uppercase;
+    color:var(--accent);
+    background:var(--accent-soft);
+    border:1px solid var(--accent);
+    border-radius:7px;
+  }
+
+  .verdict{
+    display:flex;
+    align-items:center;
+    gap:14px;
+  }
+  .verdict-icon{
+    flex-shrink:0;
+    width:58px;
+    height:58px;
+    display:grid;
+    place-items:center;
+    font-size:26px;
+    border-radius:16px;
+    background:var(--accent-soft);
+    border:1px solid var(--accent);
+  }
+
+  .k{
+    font-size:10.5px;
+    font-weight:700;
+    letter-spacing:.9px;
+    text-transform:uppercase;
+    color:var(--muted-2);
+  }
+  .v{
+    margin-top:4px;
+    font-size:23px;
+    font-weight:800;
+    letter-spacing:-.4px;
+    line-height:1.18;
+    color:#fff;
+  }
+
+  .desc{
+    margin:16px 0 18px;
+    font-size:12.5px;
+    line-height:1.65;
+    color:#a9b6c8;
+  }
+
+  .metric-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:9px;
+  }
+  .metric-row .val{
+    font-size:13.5px;
+    font-weight:800;
+    color:var(--accent);
+  }
+
+  .track{
+    height:9px;
+    border-radius:99px;
+    background:#101a2e;
+    border:1px solid rgba(148,163,184,.12);
+    overflow:hidden;
+  }
+  .bar{
+    width:0%;
+    height:100%;
+    border-radius:99px;
+    background:linear-gradient(90deg, var(--accent), rgba(255,255,255,.82));
+    box-shadow:0 0 18px -2px var(--accent);
+    transition:width 1.05s cubic-bezier(.4,0,.2,1);
+  }
+
+  .meter-grid{
+    display:grid;
+    grid-template-columns:repeat(3, minmax(0,1fr));
+    gap:10px;
+    margin-top:18px;
+  }
+  .meter{
+    display:flex;
+    flex-direction:column;
+    gap:5px;
+    padding:10px 12px;
+    border-radius:12px;
+    border:1px solid var(--stroke);
+    background:rgba(2,6,23,.55);
+  }
+  .meter .val-sm{
+    font-size:11.5px;
+    font-weight:700;
+    color:#e2e8f0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  .note{
+    margin-top:16px;
+    padding-left:11px;
+    border-left:2px solid var(--accent);
+    font-size:10.5px;
+    line-height:1.65;
+    color:#7c8aa0;
+  }
+
+  /* ---------- Botón ---------- */
+  .btn{
+    width:100%;
+    padding:14px 18px;
+    font-family:inherit;
+    font-size:13.5px;
+    font-weight:700;
+    letter-spacing:.3px;
+    color:#d7fbe8;
+    background:linear-gradient(135deg, rgba(16,185,129,.22), rgba(16,185,129,.07));
+    border:1px solid rgba(52,211,153,.35);
+    border-radius:14px;
+    cursor:pointer;
+    transition:transform .2s ease, box-shadow .2s ease, background .2s ease, color .2s ease;
+  }
+  .btn:hover{
+    color:#fff;
+    transform:translateY(-2px);
+    background:linear-gradient(135deg, rgba(16,185,129,.34), rgba(16,185,129,.12));
+    box-shadow:0 20px 44px -26px rgba(52,211,153,.95);
+  }
+  .btn:active{transform:translateY(0)}
+  .btn:focus-visible{
+    outline:2px solid var(--accent);
+    outline-offset:3px;
+  }
+
+  /* ---------- Pie ---------- */
+  footer{
+    padding:15px;
+    text-align:center;
+    font-size:10.5px;
+    letter-spacing:.3px;
+    color:#4b5a6e;
+    background:rgba(2,6,23,.4);
+    border-top:1px solid var(--stroke);
+  }
+
+  .hidden{display:none !important}
+  /* ---------- Adaptación móvil ---------- */
+  @media (max-width:920px){
+    header{flex-direction:column;align-items:flex-start;gap:12px}
+    .grid{grid-template-columns:1fr;gap:20px}
+    main{padding:26px 16px 34px}
+    .drop-zone{min-height:260px}
+  }
+  @media (max-width:520px){
+    .meter-grid{grid-template-columns:1fr 1fr}
+    .v{font-size:19.5px}
+    .verdict-icon{width:50px;height:50px;font-size:22px}
+    .header-titles h1{font-size:16px}
+    .hist-meta{max-width:104px}
+  }
+  @media (max-width:400px){
+    .meter-grid{grid-template-columns:1fr}
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:.001ms !important;transition-duration:.001ms !important}
+  }
+
+  /* ---------- Mejoras: la muestra nunca se recorta ---------- */
+  .preview-img{
+    object-fit:contain;
+    background:rgba(2,6,23,.55);
+  }
+
+  /* ---------- Aviso de error en línea (sin alert) ---------- */
+  .error-box{
+    display:flex;
+    align-items:flex-start;
+    gap:9px;
+    padding:10px 12px;
+    border-radius:12px;
+    font-size:11px;
+    line-height:1.55;
+    color:#fecdd3;
+    background:rgba(244,63,94,.10);
+    border:1px solid rgba(244,63,94,.36);
+    animation:fadeUp .35s ease both;
+  }
+  .error-box b{color:#fff;font-weight:700}
+
+  /* ---------- Distribución de probabilidad ---------- */
+  .top3{margin-top:18px;display:flex;flex-direction:column;gap:10px}
+  .top3-title{
+    font-size:10px;
+    font-weight:700;
+    letter-spacing:.9px;
+    text-transform:uppercase;
+    color:var(--muted-2);
+  }
+  .top3-list{display:flex;flex-direction:column;gap:9px}
+  .mini{
+    display:grid;
+    grid-template-columns:auto minmax(0,1fr) auto;
+    align-items:center;
+    gap:10px;
+  }
+  .mini-icon{font-size:13.5px}
+  .mini-body{min-width:0}
+  .mini-name{
+    display:block;
+    font-size:10.5px;
+    color:var(--muted);
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    margin-bottom:4px;
+  }
+  .mini-track{
+    height:6px;
+    border-radius:99px;
+    background:#101a2e;
+    border:1px solid rgba(148,163,184,.12);
+    overflow:hidden;
+  }
+  .mini-bar{
+    width:0%;
+    height:100%;
+    border-radius:99px;
+    background:linear-gradient(90deg, rgba(148,163,184,.75), rgba(148,163,184,.35));
+    transition:width .9s cubic-bezier(.4,0,.2,1);
+  }
+  .mini.is-lead .mini-bar{
+    background:linear-gradient(90deg, var(--accent), rgba(255,255,255,.75));
+    box-shadow:0 0 14px -3px var(--accent);
+  }
+  .mini-val{
+    font-size:11px;
+    font-weight:800;
+    color:#cbd5e1;
+    font-variant-numeric:tabular-nums;
+    min-width:46px;
+    text-align:right;
+  }
+  .mini.is-lead .mini-val{color:var(--accent)}
+
+  /* ---------- Historial reciente ---------- */
+  .hist{display:flex;flex-direction:column;gap:9px}
+  .hist-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .link-btn{
+    font-family:inherit;
+    font-size:9.5px;
+    font-weight:800;
+    letter-spacing:.7px;
+    text-transform:uppercase;
+    color:var(--muted-2);
+    background:none;
+    border:none;
+    padding:3px 4px;
+    border-radius:6px;
+    cursor:pointer;
+    transition:color .2s ease;
+  }
+  .link-btn:hover{color:#fda4af}
+  .link-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .hist-row{
+    display:flex;
+    gap:8px;
+    overflow-x:auto;
+    padding-bottom:4px;
+    scrollbar-width:thin;
+  }
+  .hist-item{
+    flex:0 0 auto;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:6px 10px 6px 6px;
+    border-radius:11px;
+    border:1px solid var(--stroke);
+    background:rgba(2,6,23,.55);
+    cursor:pointer;
+    transition:border-color .2s ease, background .2s ease, transform .2s ease;
+  }
+  .hist-item:hover{
+    border-color:rgba(52,211,153,.5);
+    background:rgba(16,185,129,.10);
+    transform:translateY(-1px);
+  }
+  .hist-item:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .hist-thumb{
+    width:34px;
+    height:34px;
+    border-radius:8px;
+    object-fit:cover;
+    border:1px solid var(--stroke);
+    background:#0b1424;
+  }
+  .hist-meta{display:flex;flex-direction:column;gap:2px;max-width:132px}
+  .hist-name{
+    font-size:10px;
+    font-weight:700;
+    color:#e2e8f0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .hist-clase{
+    font-size:9px;
+    color:var(--muted-2);
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  .sr-only{
+    position:absolute;
+    width:1px;
+    height:1px;
+    padding:0;
+    margin:-1px;
+    overflow:hidden;
+    clip:rect(0 0 0 0);
+    white-space:nowrap;
+    border:0;
+  }
+</style>
+</head>
+<body>
+
+  <!-- ================= Encabezado ================= -->
+  <header>
+    <div class="logo-section">
+      <div class="logo-box">🧠 YOLOv8 · LOCAL</div>
+      <div class="header-titles">
+        <h1>Plataforma de Diagnóstico Ambiental</h1>
+        <p>Análisis de ecosistemas · Región Huánuco</p>
+      </div>
+    </div>
+    <div class="badge">
+      <span class="badge-dot"></span> <span id="engine-text">Modelo .pt · servidor Python local</span>
+    </div>
+  </header>
+
+  <!-- ================= Área de trabajo ================= -->
+  <main>
+    <div class="grid">
+
+      <!-- ----- Panel 1: carga ----- -->
+      <section class="panel">
+        <div class="section-title">01 · Carga de muestra visual</div>
+
+        <div id="drop-zone" class="drop-zone" tabindex="0" role="button"
+             aria-describedby="upload-hint"
+             aria-label="Zona de carga: arrastra una imagen, pégala con Ctrl+V o pulsa para examinar">
+          <input type="file" id="file-input" accept="image/*" class="hidden" tabindex="-1" aria-hidden="true">
+
+          <div id="upload-prompt">
+            <div class="upload-icon">🗂️</div>
+            <p class="drop-title">Arrastra tu muestra aquí</p>
+            <p class="drop-sub">JPG, PNG, JPEG o WEBP · también puedes pegar con Ctrl + V</p>
+            <span class="drop-cta">Examinar localmente</span>
+          </div>
+
+          <img id="preview-img" class="preview-img" alt="Vista previa de la muestra cargada">
+        </div>
+
+        <p id="drag-hint" class="drag-hint">Suelta la imagen para iniciar el análisis</p>
+
+        <div id="error-box" class="error-box hidden" role="alert">
+          <span aria-hidden="true">⚠️</span>
+          <span id="error-text"></span>
+        </div>
+
+        <p id="upload-hint" class="hint">
+          Instala una vez <code>pip install ultralytics opencv-python numpy</code>, coloca <code>best (2).pt</code> junto al script, ejecuta <code>python probar-modelo.py --server</code> y abre <b>http://127.0.0.1:8000/</b>.
+        </p>
+
+        <div id="hist-block" class="hist hidden">
+          <div class="hist-head">
+            <span class="section-title">Historial reciente</span>
+            <button id="hist-clear" class="link-btn" type="button">Borrar historial</button>
+          </div>
+          <div id="hist-row" class="hist-row" role="list"></div>
+        </div>
+      </section>
+
+      <!-- ----- Panel 2: resultados ----- -->
+      <section class="panel">
+        <div class="section-title">02 · Resultado del modelo YOLO</div>
+
+        <div class="result-card" id="result-card" aria-live="polite">
+
+          <!-- Estado inicial -->
+          <div id="waiting-state" class="state-center">
+            <p class="state-emoji">🖥️</p>
+            <p class="state-text">Inicia el servidor Python y carga una imagen para analizarla con tu modelo .pt…</p>
+          </div>
+
+          <!-- Estado procesando -->
+          <div id="loading-state" class="state-center hidden">
+            <div class="spinner"></div>
+            <p class="state-text">Enviando la imagen al modelo local…</p>
+          </div>
+
+          <!-- Estado con resultado -->
+          <div id="success-state" class="success-box hidden">
+            <span class="chip" id="res-chip">Análisis local</span>
+
+            <div class="verdict">
+              <div class="verdict-icon" id="res-icon">💧</div>
+              <div>
+                <p class="k">Categoría detectada</p>
+                <p class="v" id="res-clase">—</p>
+              </div>
+            </div>
+
+            <p class="desc" id="res-desc">—</p>
+
+            <div class="metric-row">
+              <span class="k" id="res-porcentaje-label">Confianza del modelo (no calibrada)</span>
+              <span class="val" id="res-porcentaje">—</span>
+            </div>
+            <div class="track">
+              <div class="bar" id="res-progress"></div>
+            </div>
+
+            <div class="meter-grid">
+              <div class="meter">
+                <span class="k">Latencia</span>
+                <span class="val-sm" id="res-latencia">1.0 s</span>
+              </div>
+              <div class="meter">
+                <span class="k">Motor</span>
+                <span class="val-sm">YOLOv8 · modelo .pt</span>
+              </div>
+              <div class="meter">
+                <span class="k">Archivo</span>
+                <span class="val-sm" id="res-archivo">—</span>
+              </div>
+              <div class="meter">
+                <span class="k">Resolución</span>
+                <span class="val-sm" id="res-resolucion">—</span>
+              </div>
+              <div class="meter">
+                <span class="k">Peso</span>
+                <span class="val-sm" id="res-peso">—</span>
+              </div>
+              <div class="meter">
+                <span class="k">Formato</span>
+                <span class="val-sm" id="res-formato">—</span>
+              </div>
+            </div>
+
+            <div class="top3" id="top3-block">
+              <p class="top3-title">Clases y puntuaciones devueltas por el modelo</p>
+              <div class="top3-list" id="top3-list"></div>
+            </div>
+
+            <p class="note" id="result-note">
+              La puntuación mostrada la devuelve tu modelo .pt; no se inventa ni se eleva artificialmente. No es una probabilidad calibrada ni garantiza exactitud. Si el .pt no fue entrenado con contaminación de ríos, incendios, tala y residuos químicos, no podrá distinguir esas clases correctamente.
+            </p>
+          </div>
+        </div>
+
+        <button id="clear-btn" class="btn hidden" type="button">🔄 Analizar nueva muestra ambiental</button>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- ================= Pie ================= -->
+  <footer>
+    Laboratorio de Inteligencia Artificial Avanzada © 2026 · Universidad Nacional de Huánuco
+  </footer>
+
+  <p id="sr-status" class="sr-only" role="status" aria-live="polite"></p>
+
+  <!-- ================= Lógica local ================= -->
+  <script>
+  (function () {
+    'use strict';
+
+    /* --- Referencias del DOM --- */
+    var dropZone      = document.getElementById('drop-zone');
+    var fileInput     = document.getElementById('file-input');
+    var previewImg    = document.getElementById('preview-img');
+    var uploadPrompt  = document.getElementById('upload-prompt');
+    var waitingState  = document.getElementById('waiting-state');
+    var loadingState  = document.getElementById('loading-state');
+    var successState  = document.getElementById('success-state');
+    var clearBtn      = document.getElementById('clear-btn');
+    var resultCard    = document.getElementById('result-card');
+    var resChip       = document.getElementById('res-chip');
+    var resIcon       = document.getElementById('res-icon');
+    var resClase      = document.getElementById('res-clase');
+    var resDesc       = document.getElementById('res-desc');
+    var resPorcentaje = document.getElementById('res-porcentaje');
+    var resPorcentajeLabel = document.getElementById('res-porcentaje-label');
+    var resProgress   = document.getElementById('res-progress');
+    var resArchivo    = document.getElementById('res-archivo');
+    var resLatencia   = document.getElementById('res-latencia');
+    var resResolucion = document.getElementById('res-resolucion');
+    var resPeso       = document.getElementById('res-peso');
+    var resFormato    = document.getElementById('res-formato');
+    var top3Block     = document.getElementById('top3-block');
+    var top3List      = document.getElementById('top3-list');
+    var errorBox      = document.getElementById('error-box');
+    var errorText     = document.getElementById('error-text');
+    var histBlock     = document.getElementById('hist-block');
+    var histRow       = document.getElementById('hist-row');
+    var histClear     = document.getElementById('hist-clear');
+    var engineText    = document.getElementById('engine-text');
+    var srStatus      = document.getElementById('sr-status');
+
+    /* --- Categorías del prototipo: color, icono, descripción y palabras clave --- */
+    var CLASES = [
+      {
+        id: 'Contaminación de ríos',
+        icono: '💧',
+        color: '#38bdf8',
+        soft: 'rgba(56,189,248,.20)',
+        desc: 'Indicios de residuos sólidos o vertimientos sobre el cauce, por ejemplo en la cuenca del Huallaga.',
+        claves: ['rio', 'river', 'agua', 'contaminacion', 'basura', 'desague', 'huallaga', 'vertimiento']
+      },
+      {
+        id: 'Incendios forestales',
+        icono: '🔥',
+        color: '#fb923c',
+        soft: 'rgba(251,146,60,.20)',
+        desc: 'Áreas con quema activa, columnas de humo o material vegetal carbonizado.',
+        claves: ['fuego', 'incendio', 'humo', 'quema', 'fire', 'ceniza', 'calcinado', 'bosque']
+      },
+      {
+        id: 'Tala de árboles',
+        icono: '🌳',
+        color: '#34d399',
+        soft: 'rgba(52,211,153,.20)',
+        desc: 'La tala suele mostrar troncos abatidos, tocones y secciones de corte circulares con textura de madera; esos tonos ocres no son llamas.',
+        claves: ['tala', 'arbol', 'madera', 'tronco', 'lena', 'wood', 'logging', 'stump', 'timber', 'deforestacion', 'tree', 'selva', 'tocon', 'aserrio']
+      },
+      {
+        id: 'Residuos químicos',
+        icono: '⚗️',
+        color: '#a78bfa',
+        soft: 'rgba(167,139,250,.20)',
+        desc: 'Envases de agroquímicos, frascos abandonados o vertidos de origen industrial.',
+        claves: ['quimico', 'envase', 'pesticida', 'plaguicida', 'veneno', 'frasco', 'agro', 'quimica']
+      }
+    ];
+
+    var CLASE_INDETERMINADA = {
+      id: 'Sin detección del modelo', icono: '🔎', color: '#94a3b8',
+      soft: 'rgba(148,163,184,.18)',
+      desc: 'El modelo no devolvió una detección para esta imagen. Revisa que el archivo .pt esté bien entrenado y que incluya las categorías esperadas.'
+    };
+
+    var LATENCIA_MS = 1000;
+    var HIST_MAX    = 5;
+    var temporizador = null;
+    var profundidadArrastre = 0;
+    var lectorActivo = 0;       /* token para descartar lecturas obsoletas */
+    var ultimaMuestra = null;   /* reproduce el último análisis */
+    var historial = [];
+    var mostrarIndicadores = true;
+
+    /* --- Utilidades --- */
+    function normalizar(texto) {
+      return String(texto)
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+    }
+
+    function formatoPeso(bytes) {
+      if (!bytes && bytes !== 0) { return '—'; }
+      if (bytes < 1024) { return bytes + ' B'; }
+      if (bytes < 1024 * 1024) { return (bytes / 1024).toFixed(1) + ' KB'; }
+      return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+    }
+
+    function extension(nombre) {
+      var partes = String(nombre).split('.');
+      return partes.length > 1 ? partes.pop().toUpperCase() : '—';
+    }
+
+    function claseDeModelo(nombreCategoria) {
+      var nombre = String(nombreCategoria || 'Sin detección del modelo');
+      for (var i = 0; i < CLASES.length; i++) {
+        if (CLASES[i].id === nombre) return CLASES[i];
+      }
+      return {
+        id: nombre, icono: '🔎', color: '#94a3b8', soft: 'rgba(148,163,184,.18)',
+        desc: 'Etiqueta original devuelta por el modelo. Comprueba los nombres de clase de tu dataset.'
+      };
+    }
+
+    function convertirTopModelo(top) {
+      if (!Array.isArray(top)) return [];
+      return top.map(function (item) {
+        return { clase: claseDeModelo(item.category), valor: Math.max(0, Math.min(100, Number(item.confidence || 0) * 100)) };
+      });
+    }
+
+    function pintarTop3(lista) {
+      top3List.innerHTML = '';
+
+      lista.forEach(function (fila, indice) {
+        var wrap = document.createElement('div');
+        wrap.className = 'mini' + (indice === 0 ? ' is-lead' : '');
+
+        var icon = document.createElement('span');
+        icon.className = 'mini-icon';
+        icon.setAttribute('aria-hidden', 'true');
+        icon.textContent = fila.clase.icono;
+
+        var cuerpo = document.createElement('span');
+        cuerpo.className = 'mini-body';
+
+        var nombre = document.createElement('span');
+        nombre.className = 'mini-name';
+        nombre.textContent = fila.clase.id;
+        nombre.title = fila.clase.id;
+
+        var track = document.createElement('span');
+        track.className = 'mini-track';
+
+        var bar = document.createElement('span');
+        bar.className = 'mini-bar';
+        track.appendChild(bar);
+
+        cuerpo.appendChild(nombre);
+        cuerpo.appendChild(track);
+
+        var valor = document.createElement('span');
+        valor.className = 'mini-val';
+        valor.textContent = fila.valor.toFixed(2) + ' %';
+
+        wrap.appendChild(icon);
+        wrap.appendChild(cuerpo);
+        wrap.appendChild(valor);
+        top3List.appendChild(wrap);
+
+        var ancho = Math.max(2, fila.valor) + '%';
+        window.requestAnimationFrame(function () {
+          window.requestAnimationFrame(function () {
+            bar.style.width = ancho;
+          });
+        });
+      });
+    }
+
+    function pintarResultado(resultado, archivo, resolucion, latenciaMs) {
+      var clase = claseDeModelo(resultado.category);
+      var confidence = (typeof resultado.confidence === 'number') ? resultado.confidence : null;
+      var porcentaje = confidence === null ? null : Math.max(0, Math.min(100, confidence * 100));
+      var top = convertirTopModelo(resultado.top);
+      resultCard.style.setProperty('--accent', clase.color);
+      resultCard.style.setProperty('--accent-soft', clase.soft);
+      resultCard.classList.add('has-result');
+      resIcon.textContent = clase.icono;
+      resClase.textContent = clase.id;
+      resDesc.textContent = confidence === null
+        ? (resultado.message || clase.desc)
+        : clase.desc + (resultado.raw_label && resultado.raw_label !== clase.id ? ' Etiqueta original del .pt: ' + resultado.raw_label + '.' : '') + ' Puntuación emitida por el modelo local; revisa las clases entrenadas.';
+      resArchivo.textContent = archivo.name; resArchivo.title = archivo.name;
+      resResolucion.textContent = resolucion || (resultado.width + ' × ' + resultado.height + ' px');
+      resPeso.textContent = formatoPeso(archivo.size); resFormato.textContent = extension(archivo.name);
+      resLatencia.textContent = (latenciaMs / 1000).toFixed(2) + ' s';
+      resPorcentajeLabel.textContent = 'Confianza del modelo (no calibrada)';
+      resPorcentaje.textContent = porcentaje === null ? 'Sin detección' : porcentaje.toFixed(1) + ' %';
+      mostrarIndicadores = top.length > 0;
+      resChip.textContent = resultado.model_type ? resultado.model_type + ' · inferencia local' : 'Modelo local';
+      resProgress.style.width = '0%';
+      window.requestAnimationFrame(function () {
+        window.requestAnimationFrame(function () { resProgress.style.width = (porcentaje === null ? 0 : porcentaje) + '%'; });
+      });
+      pintarTop3(top);
+      registrarHistorial(archivo, clase);
+      anunciar(porcentaje === null
+        ? 'El modelo no devolvió una detección.'
+        : clase.id + ', puntuación del modelo ' + porcentaje.toFixed(1) + ' por ciento.');
+    }
+
+    function anunciar(mensaje) {
+      srStatus.textContent = mensaje;
+    }
+
+    function mostrarError(mensaje) {
+      errorText.textContent = mensaje;
+      errorBox.classList.remove('hidden');
+    }
+
+    function limpiarError() {
+      errorBox.classList.add('hidden');
+      errorText.textContent = '';
+    }
+
+    function mostrarEstado(nombreEstado) {
+      waitingState.classList.toggle('hidden', nombreEstado !== 'espera');
+      loadingState.classList.toggle('hidden', nombreEstado !== 'carga');
+      successState.classList.toggle('hidden', nombreEstado !== 'exito');
+      clearBtn.classList.toggle('hidden', nombreEstado !== 'exito');
+      if (nombreEstado !== 'exito') {
+        resultCard.classList.remove('has-result');
+        resultCard.style.removeProperty('--accent');
+        resultCard.style.removeProperty('--accent-soft');
+        top3Block.classList.add('hidden');
+      } else {
+        top3Block.classList.toggle('hidden', !mostrarIndicadores);
+      }
+    }
+
+    /* --- Historial reciente --- */
+    function registrarHistorial(archivo, clase) {
+      historial.unshift({
+        nombre: archivo.name,
+        clase: clase.id,
+        icono: clase.icono,
+        color: clase.color,
+        soft: clase.soft
+      });
+      if (historial.length > HIST_MAX) { historial.length = HIST_MAX; }
+      pintarHistorial();
+    }
+
+    function pintarHistorial() {
+      histRow.innerHTML = '';
+
+      if (historial.length === 0) {
+        histBlock.classList.add('hidden');
+        return;
+      }
+      histBlock.classList.remove('hidden');
+
+      historial.forEach(function (item) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'hist-item';
+        btn.setAttribute('role', 'listitem');
+        btn.title = item.nombre + ' · ' + item.clase;
+
+        var icon = document.createElement('span');
+        icon.className = 'hist-thumb';
+        icon.setAttribute('aria-hidden', 'true');
+        icon.style.display = 'grid';
+        icon.style.placeItems = 'center';
+        icon.style.fontSize = '16px';
+        icon.style.borderColor = item.color;
+        icon.style.background = item.soft;
+        icon.textContent = item.icono;
+
+        var meta = document.createElement('span');
+        meta.className = 'hist-meta';
+
+        var nom = document.createElement('span');
+        nom.className = 'hist-name';
+        nom.textContent = item.nombre;
+
+        var cls = document.createElement('span');
+        cls.className = 'hist-clase';
+        cls.textContent = item.clase;
+
+        meta.appendChild(nom);
+        meta.appendChild(cls);
+
+        btn.appendChild(icon);
+        btn.appendChild(meta);
+        histRow.appendChild(btn);
+      });
+    }
+
+    /* --- Procesamiento de la muestra con el modelo .pt en Python --- */
+    function leerDimensiones(url, alTerminar) {
+      var img = new Image();
+      img.onload = function () { alTerminar(img.naturalWidth + ' × ' + img.naturalHeight + ' px'); };
+      img.onerror = function () { alTerminar('—'); };
+      img.src = url;
+    }
+
+    function procesarMuestra(archivo) {
+      limpiarError();
+      if (!archivo) return;
+      var esImagen = archivo.type ? archivo.type.indexOf('image/') === 0 : /\.(jpe?g|png|webp|gif|bmp|avif)$/i.test(archivo.name || '');
+      if (!esImagen) { mostrarError('Formato no válido: ingresa una imagen JPG, PNG o WEBP.'); return; }
+      if (archivo.size > 12 * 1024 * 1024) { mostrarError('La imagen supera los 12 MB. Redúcela antes de analizarla.'); return; }
+      if (window.location.protocol === 'file:') {
+        mostrarError('Para usar el modelo .pt, inicia Python con `python probar-modelo.py --server` y abre http://127.0.0.1:8000/ (no abras el HTML con doble clic).');
+        return;
+      }
+      ultimaMuestra = archivo;
+      lectorActivo += 1;
+      var token = lectorActivo;
+      var inicio = (window.performance && window.performance.now) ? window.performance.now() : Date.now();
+      mostrarEstado('carga'); resProgress.style.width = '0%';
+      anunciar('Enviando la imagen al modelo YOLO local');
+      var lector = new FileReader();
+      lector.onerror = function () {
+        if (token !== lectorActivo) return;
+        mostrarEstado('espera'); mostrarError('No se pudo leer el archivo. Vuelve a seleccionarlo.');
+      };
+      lector.onload = function () {
+        if (token !== lectorActivo) return;
+        var dataUrl = lector.result;
+        previewImg.src = dataUrl; previewImg.classList.add('is-visible'); uploadPrompt.classList.add('hidden');
+        leerDimensiones(dataUrl, function (medida) { if (token === lectorActivo) resResolucion.textContent = medida; });
+        fetch('/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filename: archivo.name, image: dataUrl })
+        }).then(function (response) {
+          return response.json().then(function (payload) {
+            if (!response.ok) throw new Error(payload.error || 'El servidor local rechazó el análisis.');
+            return payload;
+          });
+        }).then(function (payload) {
+          if (token !== lectorActivo) return;
+          var fin = (window.performance && window.performance.now) ? window.performance.now() : Date.now();
+          var latencia = Math.max(1, Math.round(fin - inicio));
+          pintarResultado(payload, archivo, payload.width + ' × ' + payload.height + ' px', latencia);
+          mostrarEstado('exito');
+        }).catch(function (error) {
+          if (token !== lectorActivo) return;
+          mostrarEstado('espera');
+          var msg = error && error.message ? error.message : 'No se pudo contactar el servidor Python.';
+          if (error instanceof TypeError) msg = 'No se pudo conectar con Python. Ejecuta `python probar-modelo.py --server` y abre http://127.0.0.1:8000/.';
+          mostrarError(msg);
+          anunciar('No se pudo conectar con el modelo local');
+        });
+      };
+      lector.readAsDataURL(archivo);
+    }
+
+    /* --- Reinicio de la interfaz --- */
+    function reiniciar() {
+      if (temporizador) {
+        window.clearTimeout(temporizador);
+        temporizador = null;
+      }
+      lectorActivo += 1;   /* invalida cualquier FileReader en vuelo */
+      profundidadArrastre = 0;
+      dropZone.classList.remove('is-drag');
+      limpiarError();
+
+      previewImg.classList.remove('is-visible');
+      previewImg.removeAttribute('src');
+      uploadPrompt.classList.remove('hidden');
+
+      mostrarEstado('espera');
+      resProgress.style.width = '0%';
+      resPorcentaje.textContent = '—';
+      resPorcentajeLabel.textContent = 'Confianza del modelo (no calibrada)';
+      mostrarIndicadores = true;
+      resClase.textContent = '—';
+      resDesc.textContent = '—';
+      resArchivo.textContent = '—';
+      resResolucion.textContent = '—';
+      resPeso.textContent = '—';
+      resFormato.textContent = '—';
+      resIcon.textContent = '💧';
+      resChip.textContent = 'Análisis local';
+      top3List.innerHTML = '';
+
+      fileInput.value = '';
+      anunciar('Listo para una nueva muestra');
+
+      if (ultimaMuestra) {
+        dropZone.focus({ preventScroll: true });
+      }
+    }
+
+    /* --- Eventos: abrir el selector --- */
+    dropZone.addEventListener('click', function () {
+      fileInput.click();
+    });
+
+    dropZone.addEventListener('keydown', function (evento) {
+      if (evento.key === 'Enter' || evento.key === ' ' || evento.key === 'Spacebar') {
+        evento.preventDefault();
+        fileInput.click();
+      }
+    });
+
+    fileInput.addEventListener('change', function (evento) {
+      if (evento.target.files && evento.target.files.length > 0) {
+        procesarMuestra(evento.target.files[0]);
+      }
+    });
+
+    /* --- Eventos: arrastrar y soltar con resaltado --- */
+    dropZone.addEventListener('dragenter', function (evento) {
+      evento.preventDefault();
+      profundidadArrastre += 1;
+      dropZone.classList.add('is-drag');
+    });
+
+    dropZone.addEventListener('dragover', function (evento) {
+      evento.preventDefault();
+      if (evento.dataTransfer) { evento.dataTransfer.dropEffect = 'copy'; }
+      dropZone.classList.add('is-drag');
+    });
+
+    dropZone.addEventListener('dragleave', function (evento) {
+      evento.preventDefault();
+      profundidadArrastre -= 1;
+      if (profundidadArrastre <= 0) {
+        profundidadArrastre = 0;
+        dropZone.classList.remove('is-drag');
+      }
+    });
+
+    dropZone.addEventListener('drop', function (evento) {
+      evento.preventDefault();
+      profundidadArrastre = 0;
+      dropZone.classList.remove('is-drag');
+      var sueltos = evento.dataTransfer ? evento.dataTransfer.files : null;
+      if (sueltos && sueltos.length > 0) {
+        procesarMuestra(sueltos[0]);
+      }
+    });
+
+    /* Evita que el navegador abra la imagen al soltarla fuera de la zona */
+    window.addEventListener('dragover', function (evento) { evento.preventDefault(); });
+    window.addEventListener('drop', function (evento) { evento.preventDefault(); });
+
+    /* --- Pegar desde el portapapeles (Ctrl + V) --- */
+    window.addEventListener('paste', function (evento) {
+      var datos = evento.clipboardData;
+      if (!datos) { return; }
+
+      var archivos = datos.files;
+      if (archivos && archivos.length > 0) {
+        evento.preventDefault();
+        procesarMuestra(archivos[0]);
+        return;
+      }
+
+      var items = datos.items || [];
+      var i, item;
+      for (i = 0; i < items.length; i++) {
+        item = items[i];
+        if (item.kind === 'file' && item.type && item.type.indexOf('image/') === 0) {
+          var pegado = item.getAsFile();
+          if (pegado) {
+            evento.preventDefault();
+            procesarMuestra(pegado);
+            return;
+          }
+        }
+      }
+    });
+
+    /* --- Eventos: botón de reinicio y historial --- */
+    clearBtn.addEventListener('click', function (evento) {
+      evento.stopPropagation();
+      reiniciar();
+    });
+
+    histClear.addEventListener('click', function (evento) {
+      evento.stopPropagation();
+      historial = [];
+      pintarHistorial();
+      anunciar('Historial borrado');
+    });
+  })();
+  </script>
+
+</body>
+</html>
