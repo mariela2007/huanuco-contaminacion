@@ -1,0 +1,4 @@
+Flask==3.0.3
+ultralytics==8.4.177
+pymongo==4.8.0
+gunicorn==22.0.0
