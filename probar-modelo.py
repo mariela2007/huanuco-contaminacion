@@ -21,6 +21,7 @@ import glob
 import json
 import os
 import sys
+import traceback
 import unicodedata
 from pathlib import Path
 from http.server import BaseHTTPRequestHandler
@@ -291,7 +292,9 @@ def predecir_modelo(model, imagen: np.ndarray) -> dict:
     probs = getattr(result, "probs", None)
     if probs is not None:
         is_classification = True
-        vector = probs.data.detach().cpu().numpy().reshape(-1).tolist()
+        # .tolist() evita el puente torch->numpy (falla con "Numpy is not available"
+        # cuando torch y numpy tienen versiones incompatibles).
+        vector = probs.data.detach().cpu().reshape(-1).tolist()
         for idx, score in enumerate(vector):
             raw = nombre_clase(names, idx)
             category = mapear_categoria_modelo(raw)
@@ -302,8 +305,8 @@ def predecir_modelo(model, imagen: np.ndarray) -> dict:
     else:
         boxes = getattr(result, "boxes", None)
         if boxes is not None and len(boxes) > 0:
-            class_ids = boxes.cls.detach().cpu().numpy().astype(int).tolist()
-            confidences = boxes.conf.detach().cpu().numpy().tolist()
+            class_ids = [int(c) for c in boxes.cls.detach().cpu().tolist()]
+            confidences = boxes.conf.detach().cpu().tolist()
             for idx, score in zip(class_ids, confidences):
                 raw = nombre_clase(names, idx)
                 category = mapear_categoria_modelo(raw)
@@ -534,6 +537,7 @@ def _get_model():
             _model_error = None
         except Exception as exc:
             _model_error = str(exc)
+            traceback.print_exc()
             return None
     return _model
 
@@ -599,10 +603,15 @@ def _analyze_image(image, filename: str, origin: str):
     result["filename"] = filename[:255]
     result["width"] = int(image.shape[1])
     result["height"] = int(image.shape[0])
+    # Claves que espera index.html: texto en mayúsculas y porcentaje como "95.3%".
+    result["problematica"] = str(result.get("category", "")).upper()
+    _conf = result.get("confidence")
+    result["certeza"] = (f"{_conf * 100:.1f}%" if isinstance(_conf, (int, float)) else "")
     try:
         mongo_id = _save_result(result, filename, origin)
     except Exception as exc:
         # No ocultar que la inferencia funcionó pero el registro no.
+        traceback.print_exc()
         return jsonify({"error": "Predicción realizada, pero falló el registro en MongoDB.",
                         "detail": str(exc), "result": result}), 503
     result["success"] = True
@@ -628,6 +637,7 @@ def analyze_json():
         image = cv2.imdecode(np.frombuffer(raw, dtype=np.uint8), cv2.IMREAD_COLOR)
         return _analyze_image(image, str(data.get("filename", "imagen")), "web/analyze")
     except Exception as exc:
+        traceback.print_exc()
         return jsonify({"error": "Falló el análisis: " + str(exc)}), 400
 
 
@@ -647,7 +657,10 @@ def predict_upload():
         image = cv2.imdecode(np.frombuffer(raw, dtype=np.uint8), cv2.IMREAD_COLOR)
         return _analyze_image(image, upload.filename, "android/predict")
     except Exception as exc:
-        return jsonify({"error": "Falló el análisis: " + str(exc)}), 500
+        # Queda el traceback completo en Render > Logs para ver la causa real del 500.
+        traceback.print_exc()
+        return jsonify({"error": "Falló el análisis: " + str(exc),
+                        "tipo": type(exc).__name__}), 500
 
 
 if __name__ == "__main__":
