@@ -480,5 +480,183 @@ def main():
     return 0
 
 
+
+# -----------------------------------------------------------------------------
+# Despliegue web: Flask + Render + MongoDB Atlas
+# Dependencias web adicionales: pip install Flask gunicorn pymongo
+# Render Start Command: gunicorn probar-modelo:app
+# Variables de entorno: MONGO_URI (recomendado/esperado para persistencia)
+# -----------------------------------------------------------------------------
+from flask import Flask, jsonify, request, send_from_directory
+from pymongo import MongoClient
+from datetime import datetime, timezone
+from threading import Lock
+
+app = Flask(__name__, static_folder=None)
+app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024
+BASE_DIR = Path(__file__).resolve().parent
+_model = None
+_model_error = None
+_model_lock = Lock()
+_mongo_client = None
+_historial_col = None
+_mongo_error = None
+
+# Conexión diferida y no bloqueante al importar la app. Atlas requiere MONGO_URI.
+_mongo_uri = os.getenv("MONGO_URI")
+if _mongo_uri:
+    try:
+        _mongo_client = MongoClient(_mongo_uri, serverSelectionTimeoutMS=5000)
+        _mongo_db = _mongo_client.get_default_database()
+        if _mongo_db is None:
+            raise ValueError("MONGO_URI debe incluir el nombre de la base de datos, por ejemplo /innobest_db")
+        _historial_col = _mongo_db["historial_contaminacion"]
+    except Exception as exc:
+        _mongo_error = str(exc)
+else:
+    _mongo_error = "No está configurada la variable MONGO_URI"
+
+
+def _get_model():
+    global _model, _model_error
+    if _model is not None:
+        return _model
+    with _model_lock:
+        if _model is not None:
+            return _model
+        model_path = buscar_modelo(BASE_DIR)
+        if not model_path:
+            _model_error = "No se encontró ningún archivo .pt junto al script"
+            return None
+        try:
+            from ultralytics import YOLO
+            _model = YOLO(model_path)
+            _model_error = None
+        except Exception as exc:
+            _model_error = str(exc)
+            return None
+    return _model
+
+
+def _save_result(result: dict, filename: str, origin: str):
+    """Persistir resultado si MongoDB está disponible; no guardar la imagen."""
+    if _historial_col is None:
+        return None
+    document = {
+        "problematica_detectada": result.get("category", "DESCONOCIDO"),
+        "coeficiente_certeza": result.get("confidence"),
+        "tipo_arquitectura": result.get("model_type", "YOLO"),
+        "raw_label": result.get("raw_label", ""),
+        "filename": filename[:255],
+        "origen": origin,
+        "timestamp": datetime.now(timezone.utc),
+    }
+    inserted = _historial_col.insert_one(document)
+    return str(inserted.inserted_id)
+
+
+@app.errorhandler(413)
+def too_large(_error):
+    return jsonify({"error": "La imagen supera el límite de 20 MB."}), 413
+
+
+@app.after_request
+def cors(response):
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+@app.route("/", methods=["GET"])
+def home():
+    html = BASE_DIR / "index.html"
+    if not html.is_file():
+        return jsonify({"error": "No se encontró index.html junto al servicio."}), 404
+    return send_from_directory(str(BASE_DIR), "index.html")
+
+
+@app.route("/health", methods=["GET"])
+def health():
+    model = _get_model()
+    return jsonify({
+        "ok": model is not None,
+        "model": Path(buscar_modelo(BASE_DIR)).name if buscar_modelo(BASE_DIR) else None,
+        "model_error": _model_error,
+        "mongodb_configured": _historial_col is not None,
+        "mongodb_error": _mongo_error,
+    }), (200 if model is not None else 503)
+
+
+def _analyze_image(image, filename: str, origin: str):
+    if image is None:
+        return jsonify({"error": "No se pudo decodificar la imagen."}), 400
+    model = _get_model()
+    if model is None:
+        return jsonify({"error": _model_error or "No hay un modelo .pt disponible."}), 503
+    result = predecir_modelo(model, image)
+    result["filename"] = filename[:255]
+    result["width"] = int(image.shape[1])
+    result["height"] = int(image.shape[0])
+    try:
+        mongo_id = _save_result(result, filename, origin)
+    except Exception as exc:
+        # No ocultar que la inferencia funcionó pero el registro no.
+        return jsonify({"error": "Predicción realizada, pero falló el registro en MongoDB.",
+                        "detail": str(exc), "result": result}), 503
+    result["success"] = True
+    if mongo_id:
+        result["id_registro_mongodb"] = mongo_id
+    else:
+        result["warning"] = "Predicción completada sin persistencia: configura MONGO_URI."
+    return jsonify(result), 200
+
+
+@app.route("/analyze", methods=["POST", "OPTIONS"])
+def analyze_json():
+    if request.method == "OPTIONS":
+        return ("", 200)
+    try:
+        data = request.get_json(silent=True) or {}
+        encoded = str(data.get("image", ""))
+        if "," in encoded:
+            encoded = encoded.split(",", 1)[1]
+        raw = base64.b64decode(encoded, validate=True)
+        if not raw or len(raw) > 20 * 1024 * 1024:
+            return jsonify({"error": "La imagen está vacía o supera 20 MB."}), 413
+        image = cv2.imdecode(np.frombuffer(raw, dtype=np.uint8), cv2.IMREAD_COLOR)
+        return _analyze_image(image, str(data.get("filename", "imagen")), "web/analyze")
+    except Exception as exc:
+        return jsonify({"error": "Falló el análisis: " + str(exc)}), 400
+
+
+@app.route("/predict", methods=["POST", "OPTIONS"])
+def predict_upload():
+    if request.method == "OPTIONS":
+        return ("", 200)
+    upload = request.files.get("image") or request.files.get("file")
+    if upload is None:
+        return jsonify({"error": "Envía la imagen como multipart/form-data en el campo 'image'."}), 400
+    if not upload.filename:
+        return jsonify({"error": "El archivo de imagen no tiene nombre."}), 400
+    try:
+        raw = upload.read(20 * 1024 * 1024 + 1)
+        if not raw or len(raw) > 20 * 1024 * 1024:
+            return jsonify({"error": "La imagen está vacía o supera 20 MB."}), 413
+        image = cv2.imdecode(np.frombuffer(raw, dtype=np.uint8), cv2.IMREAD_COLOR)
+        return _analyze_image(image, upload.filename, "android/predict")
+    except Exception as exc:
+        return jsonify({"error": "Falló el análisis: " + str(exc)}), 500
+
+
 if __name__ == "__main__":
-    raise SystemExit(main())
+    carpeta = BASE_DIR
+    if os.environ.get("PORT"):
+        # Render asigna PORT dinámicamente; escuchar en todas las interfaces.
+        app.run(host="0.0.0.0", port=int(os.environ["PORT"]))
+    elif "--server" in sys.argv[1:]:
+        # Modo HTTP local original conservado (127.0.0.1:8000).
+        raise SystemExit(iniciar_servidor(carpeta))
+    else:
+        raise SystemExit(main())
