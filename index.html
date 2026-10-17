@@ -1188,48 +1188,42 @@
         }
         var blob = new Blob([ab], {type: mimeString});
 
-        // Reemplaza el bloque del fetch por este código limpio
-var formData = new FormData();
-formData.append('image', archivo);
+        // Crear el formulario multiparte exigido por el backend unificado
+        var formData = new FormData();
+        formData.append('image', blob, archivo.name);
 
-fetch('/predict', {
-  method: 'POST',
-  body: formData
-}).then(function (response) {
-  return response.json();
-}).then(function (payload) {
-  // Mostrar el resultado directamente usando tu función nativa
-  if (token !== lectorActivo) return;
-  var fin = (window.performance && window.performance.now) ? window.performance.now() : Date.now();
-  var latencia = Math.max(1, Math.round(fin - inicio));
+        // Cambiado de '/analyze' a '/predict' apuntando directamente a tu API en Render
+        fetch('/predict', {
+          method: 'POST',
+          body: formData
+        }).then(function (response) {
+          return response.json().then(function (payload) {
+            if (!response.ok) throw new Error(payload.error || 'El servidor en Render rechazó el análisis.');
+            return payload;
+          });
+        })
+        .then(function (payload) {
+          if (token !== lectorActivo) return;
+          if (payload && payload.error) { throw new Error(payload.error); }
 
-  // Mapear los datos que envía tu app.py unificado
-  var datosAdaptados = {
-      fire: payload.problematica === "INCENDIOS FORESTALES",
-      boxes: [],
-      ratio: 0,
-      largest_ratio: 0,
-      core_ratio: 0,
-      width: 640,
-      height: 480
-  };
+          var fin = (window.performance && window.performance.now) ? window.performance.now() : Date.now();
+          var latencia = Math.max(1, Math.round(fin - inicio));
 
-  pintarResultado(datosAdaptados, archivo, 'Procesado en Nube', latencia);
+          // Pinta el panel derecho con la respuesta real del modelo .pt:
+          // categoría, descripción, confianza, métricas y lista de puntuaciones.
+          pintarResultado(payload, archivo, null, latencia);
+          mostrarEstado('exito');
+        })
+        .catch(function (error) {
+          if (token !== lectorActivo) return;
+          mostrarEstado('espera');
+          var msg = error && error.message ? error.message : 'Error en la conexión con el servidor web en la nube.';
+          mostrarError(msg);
+        });
+      };
+      lector.readAsDataURL(archivo);
+    }
 
-  // Sobreescribir el texto de la caja con los datos de tu modelo real
-  var cajaClase = document.querySelector('.res-clase') || document.getElementById('resClase');
-  var cajaConf = document.querySelector('.res-porcentaje') || document.getElementById('resPorcentaje');
-  if (cajaClase) cajaClase.textContent = payload.problematica;
-  if (cajaConf) cajaConf.textContent = payload.certeza;
-
-  mostrarEstado('exito');
-}).catch(function (error) {
-  mostrarEstado('espera');
-  mostrarError('Error de comunicación con el servidor Render.');
-});
-      };                              /* <-- AÑADIDO: cierra lector.onload */
-      lector.readAsDataURL(archivo);  /* <-- AÑADIDO: faltaba esta llamada */
-    }                                 /* <-- AÑADIDO: cierra procesarMuestra */
 
     /* --- Reinicio de la interfaz --- */
     function reiniciar() {

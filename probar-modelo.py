@@ -376,8 +376,45 @@ class LocalHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def leer_multipart(self, length: int):
+        """Lee un cuerpo multipart/form-data, que es lo que index.html envía a /predict."""
+        cuerpo = self.rfile.read(length)
+        tipo = self.headers.get("Content-Type", "") or ""
+        pos = tipo.lower().find("boundary=")
+        if pos == -1:
+            return None, "imagen"
+        boundary = tipo[pos + len("boundary="):].split(";")[0].strip().strip('"')
+        if not boundary:
+            return None, "imagen"
+        delimitador = b"--" + boundary.encode("latin-1")
+        datos_imagen = None
+        nombre_archivo = "imagen"
+        for parte in cuerpo.split(delimitador):
+            if parte.startswith(b"\r\n"):
+                parte = parte[2:]
+            if not parte or parte == b"--" or b"\r\n\r\n" not in parte:
+                continue
+            cabecera, contenido = parte.split(b"\r\n\r\n", 1)
+            # Quita solo el CRLF que separa el contenido del siguiente boundary.
+            if contenido.endswith(b"\r\n"):
+                contenido = contenido[:-2]
+            campos = {}
+            for linea in cabecera.decode("latin-1", "replace").split("\r\n"):
+                if linea.lower().startswith("content-disposition"):
+                    for trozo in linea.split(";"):
+                        trozo = trozo.strip()
+                        if "=" in trozo:
+                            clave, valor = trozo.split("=", 1)
+                            campos[clave.strip().lower()] = valor.strip().strip('"')
+            if campos.get("name") in ("image", "file") and contenido:
+                datos_imagen = contenido
+                nombre_archivo = campos.get("filename") or nombre_archivo
+        return datos_imagen, nombre_archivo
+
     def do_POST(self):
-        if self.path.split("?", 1)[0] != "/analyze":
+        ruta = self.path.split("?", 1)[0]
+        # /analyze recibe JSON base64; /predict recibe multipart/form-data desde index.html.
+        if ruta not in ("/analyze", "/predict"):
             self.send_json(404, {"error": "Ruta no encontrada"})
             return
         try:
@@ -385,11 +422,19 @@ class LocalHandler(BaseHTTPRequestHandler):
             if length <= 0 or length > 20 * 1024 * 1024:
                 self.send_json(413, {"error": "La solicitud está vacía o supera 20 MB."})
                 return
-            data = json.loads(self.rfile.read(length).decode("utf-8"))
-            encoded = str(data.get("image", ""))
-            if "," in encoded:
-                encoded = encoded.split(",", 1)[1]
-            raw = base64.b64decode(encoded, validate=True)
+            tipo = (self.headers.get("Content-Type", "") or "").lower()
+            if "multipart/form-data" in tipo:
+                raw, nombre_archivo = self.leer_multipart(length)
+                if not raw:
+                    self.send_json(400, {"error": "Envía la imagen en el campo 'image'."})
+                    return
+            else:
+                data = json.loads(self.rfile.read(length).decode("utf-8"))
+                encoded = str(data.get("image", ""))
+                if "," in encoded:
+                    encoded = encoded.split(",", 1)[1]
+                raw = base64.b64decode(encoded, validate=True)
+                nombre_archivo = str(data.get("filename", "imagen"))
             image = cv2.imdecode(np.frombuffer(raw, dtype=np.uint8), cv2.IMREAD_COLOR)
             if image is None:
                 self.send_json(400, {"error": "No se pudo decodificar la imagen."})
@@ -399,9 +444,14 @@ class LocalHandler(BaseHTTPRequestHandler):
                 self.send_json(503, {"error": "No hay un modelo .pt cargado. Coloca best.pt o best (2).pt junto al script."})
                 return
             result = predecir_modelo(model, image)
-            result["filename"] = str(data.get("filename", "imagen"))[:255]
+            result["filename"] = str(nombre_archivo)[:255]
             result["width"] = int(image.shape[1])
             result["height"] = int(image.shape[0])
+            # Mismas claves que ya devuelve la ruta Flask, para que index.html
+            # muestre clase y certeza también con el servidor local.
+            result["problematica"] = str(result.get("category", "")).upper()
+            _conf = result.get("confidence")
+            result["certeza"] = (f"{_conf * 100:.1f}%" if isinstance(_conf, (int, float)) else "")
             self.send_json(200, result)
         except Exception as exc:
             self.send_json(500, {"error": "Falló el análisis local: " + str(exc)})
