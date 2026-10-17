@@ -1188,47 +1188,46 @@
         }
         var blob = new Blob([ab], {type: mimeString});
 
-        // Crear el formulario multiparte exigido por el backend unificado
-        var formData = new FormData();
-        formData.append('image', blob, archivo.name);
+        // Reemplaza el bloque del fetch por este código limpio
+var formData = new FormData();
+formData.append('image', archivo);
 
-        // Cambiado de '/analyze' a '/predict' apuntando directamente a tu API en Render
-        fetch('/predict', {
-          method: 'POST',
-          body: formData
-        }).then(function (response) {
-          return response.json().then(function (payload) {
-            if (!response.ok) throw new Error(payload.error || 'El servidor en Render rechazó el análisis.');
-            return payload;
-          });
-        })
-        .then(function (payload) {
-          if (token !== lectorActivo) return;
-          
-          // Actualizar las métricas dinámicas directamente en las cajas de tu interfaz oscura
-          var resClase = document.getElementById('resClase') || document.querySelector('.res-clase') || document.querySelector('[id*="Clase"]');
-          var resPorcentaje = document.getElementById('resPorcentaje') || document.querySelector('.res-porcentaje') || document.querySelector('[id*="Porcentaje"]');
-          var resProgress = document.getElementById('resProgress') || document.querySelector('.progress-bar') || document.querySelector('[id*="progress"]');
-          
-          if (resClase) resClase.textContent = payload.problematica || 'No clasificado';
-          if (resPorcentaje) resPorcentaje.textContent = payload.certeza || '0.00%';
-          if (resProgress) {
-              var porcentajeNum = parseFloat(payload.certeza) || 0;
-              resProgress.style.width = porcentajeNum + '%';
-          }
-          
-          // Transicionar estados visuales del panel derecho
-          mostrarEstado('exito');
-        })
-        .catch(function (error) {
-          if (token !== lectorActivo) return;
-          mostrarEstado('espera');
-          var msg = error && error.message ? error.message : 'Error en la conexión con el servidor web en la nube.';
-          mostrarError(msg);
-        });
-      };
-      lector.readAsDataURL(archivo);
-    }
+fetch('/predict', {
+  method: 'POST',
+  body: formData
+}).then(function (response) {
+  return response.json();
+}).then(function (payload) {
+  // Mostrar el resultado directamente usando tu función nativa
+  if (token !== lectorActivo) return;
+  var fin = (window.performance && window.performance.now) ? window.performance.now() : Date.now();
+  var latencia = Math.max(1, Math.round(fin - inicio));
+
+  // Mapear los datos que envía tu app.py unificado
+  var datosAdaptados = {
+      fire: payload.problematica === "INCENDIOS FORESTALES",
+      boxes: [],
+      ratio: 0,
+      largest_ratio: 0,
+      core_ratio: 0,
+      width: 640,
+      height: 480
+  };
+
+  pintarResultado(datosAdaptados, archivo, 'Procesado en Nube', latencia);
+
+  // Sobreescribir el texto de la caja con los datos de tu modelo real
+  var cajaClase = document.querySelector('.res-clase') || document.getElementById('resClase');
+  var cajaConf = document.querySelector('.res-porcentaje') || document.getElementById('resPorcentaje');
+  if (cajaClase) cajaClase.textContent = payload.problematica;
+  if (cajaConf) cajaConf.textContent = payload.certeza;
+
+  mostrarEstado('exito');
+}).catch(function (error) {
+  mostrarEstado('espera');
+  mostrarError('Error de comunicación con el servidor Render.');
+});
+
 
 
     /* --- Reinicio de la interfaz --- */
