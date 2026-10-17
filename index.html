@@ -1166,37 +1166,70 @@
         if (token !== lectorActivo) return;
         mostrarEstado('espera'); mostrarError('No se pudo leer el archivo. Vuelve a seleccionarlo.');
       };
-      lector.onload = function () {
+            lector.onload = function () {
         if (token !== lectorActivo) return;
         var dataUrl = lector.result;
-        previewImg.src = dataUrl; previewImg.classList.add('is-visible'); uploadPrompt.classList.add('hidden');
-        leerDimensiones(dataUrl, function (medida) { if (token === lectorActivo) resResolucion.textContent = medida; });
-        fetch('/analyze', {
+        previewImg.src = dataUrl; 
+        previewImg.classList.add('is-visible'); 
+        uploadPrompt.classList.add('hidden');
+        
+        leerDimensiones(dataUrl, function (medida) { 
+          if (token === lectorActivo) resResolucion.textContent = medida; 
+        });
+
+        // --- CONEXIÓN DE MATRIZ DE DATOS CORREGIDA PARA FLASK + RENDER ---
+        // Convertir la URL base64 a un archivo binario real (Blob) para que lo lea Flask de forma nativa
+        var byteString = atob(dataUrl.split(',')[1]);
+        var mimeString = dataUrl.split(',')[0].split(':')[1].split(';')[0];
+        var ab = new ArrayBuffer(byteString.length);
+        var ia = new Uint8Array(ab);
+        for (var i = 0; i < byteString.length; i++) {
+            ia[i] = byteString.charCodeAt(i);
+        }
+        var blob = new Blob([ab], {type: mimeString});
+
+        // Crear el formulario multiparte exigido por el backend unificado
+        var formData = new FormData();
+        formData.append('image', blob, archivo.name);
+
+        // Cambiado de '/analyze' a '/predict' apuntando directamente a tu API en Render
+        fetch('/predict', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ filename: archivo.name, image: dataUrl })
+          body: formData
         }).then(function (response) {
           return response.json().then(function (payload) {
-            if (!response.ok) throw new Error(payload.error || 'El servidor local rechazó el análisis.');
+            if (!response.ok) throw new Error(payload.error || 'El servidor en Render rechazó el análisis.');
             return payload;
           });
-        }).then(function (payload) {
+        })
+        .then(function (payload) {
           if (token !== lectorActivo) return;
-          var fin = (window.performance && window.performance.now) ? window.performance.now() : Date.now();
-          var latencia = Math.max(1, Math.round(fin - inicio));
-          pintarResultado(payload, archivo, payload.width + ' × ' + payload.height + ' px', latencia);
+          
+          // Actualizar las métricas dinámicas directamente en las cajas de tu interfaz oscura
+          var resClase = document.getElementById('resClase') || document.querySelector('.res-clase') || document.querySelector('[id*="Clase"]');
+          var resPorcentaje = document.getElementById('resPorcentaje') || document.querySelector('.res-porcentaje') || document.querySelector('[id*="Porcentaje"]');
+          var resProgress = document.getElementById('resProgress') || document.querySelector('.progress-bar') || document.querySelector('[id*="progress"]');
+          
+          if (resClase) resClase.textContent = payload.problematica || 'No clasificado';
+          if (resPorcentaje) resPorcentaje.textContent = payload.certeza || '0.00%';
+          if (resProgress) {
+              var porcentajeNum = parseFloat(payload.certeza) || 0;
+              resProgress.style.width = porcentajeNum + '%';
+          }
+          
+          // Transicionar estados visuales del panel derecho
           mostrarEstado('exito');
-        }).catch(function (error) {
+        })
+        .catch(function (error) {
           if (token !== lectorActivo) return;
           mostrarEstado('espera');
-          var msg = error && error.message ? error.message : 'No se pudo contactar el servidor Python.';
-          if (error instanceof TypeError) msg = 'No se pudo conectar con Python. Ejecuta `python probar-modelo.py --server` y abre http://127.0.0.1:8000/.';
+          var msg = error && error.message ? error.message : 'Error en la conexión con el servidor web en la nube.';
           mostrarError(msg);
-          anunciar('No se pudo conectar con el modelo local');
         });
       };
       lector.readAsDataURL(archivo);
     }
+
 
     /* --- Reinicio de la interfaz --- */
     function reiniciar() {
